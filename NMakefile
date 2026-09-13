@@ -1,0 +1,79 @@
+TARGET    = engine.exe
+SRC_DIR   = src
+BUILD_DIR = build
+BIN_DIR   = bin
+TOOLS_DIR = tools
+ASSETS_DIR = assets
+
+VCPKG_DIR = .\vcpkg_installed\x64-windows
+
+ASSET_OBJ = $(BUILD_DIR)\gen_assets.obj
+ASSET_EXE = $(TOOLS_DIR)\gen_assets.exe
+DLL_DIR = $(VCPKG_DIR)\bin
+
+CC     = cl
+LD     = link
+
+CFLAGS = /nologo /std:c11 /W3 /O2 /I$(SRC_DIR) /D_CRT_SECURE_NO_WARNINGS /EHsc
+
+CFLAGS = $(CFLAGS) /I".\vcpkg_installed\x64-windows\include"
+
+LIBS = opengl32.lib gdi32.lib user32.lib kernel32.lib winmm.lib
+
+LIBS = $(LIBS) ".\vcpkg_installed\x64-windows\lib\libpng16.lib"
+LIBS = $(LIBS) ".\vcpkg_installed\x64-windows\lib\z.lib"
+
+OBJS = \
+	$(BUILD_DIR)\gl_loader.obj \
+	$(BUILD_DIR)\shader.obj \
+	$(BUILD_DIR)\texture.obj \
+	$(BUILD_DIR)\mesh.obj \
+	$(BUILD_DIR)\camera.obj \
+	$(BUILD_DIR)\wav.obj \
+	$(BUILD_DIR)\main.obj \
+	$(BUILD_DIR)\platform_win32.obj \
+	$(BUILD_DIR)\audio_winmm.obj
+
+all: $(BIN_DIR)\$(TARGET)
+
+$(ASSET_OBJ): $(TOOLS_DIR)\gen_assets.c $(BUILD_DIR)
+	$(CC) $(CFLAGS) /MT /c $(TOOLS_DIR)\gen_assets.c /Fo$(ASSET_OBJ)
+
+$(BIN_DIR)\$(TARGET): $(BUILD_DIR) $(BIN_DIR) $(OBJS)
+	$(LD) /nologo /MACHINE:X64 /OUT:$(BIN_DIR)\$(TARGET) $(OBJS) $(LIBS)
+
+$(ASSET_EXE): $(ASSET_OBJ) $(TOOLS_DIR)
+	$(LD) /nologo /MACHINE:X64 /OUT:$(ASSET_EXE) $(ASSET_OBJ) "$(VCPKG_DIR)\lib\libpng16.lib" "$(VCPKG_DIR)\lib\z.lib"
+
+$(TOOLS_DIR):
+	if not exist $(TOOLS_DIR) mkdir $(TOOLS_DIR)
+
+assets: $(ASSET_EXE)
+	if not exist $(ASSETS_DIR) mkdir $(ASSETS_DIR)
+	copy /Y "$(DLL_DIR)\libpng16.dll" "$(TOOLS_DIR)\libpng16.dll"
+	copy /Y "$(DLL_DIR)\z.dll" "$(TOOLS_DIR)\z.dll"
+	$(ASSET_EXE)
+	del /Q "$(TOOLS_DIR)\libpng16.dll"
+	del /Q "$(TOOLS_DIR)\z.dll"
+
+{$(SRC_DIR)}.c{$(BUILD_DIR)}.obj:
+	$(CC) $(CFLAGS) /c $< /Fo$@
+
+$(BUILD_DIR):
+	if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+
+$(BIN_DIR):
+	if not exist $(BIN_DIR) mkdir $(BIN_DIR)
+	copy /Y "$(DLL_DIR)\libpng16.dll" "$(BIN_DIR)\libpng16.dll"
+	copy /Y "$(DLL_DIR)\z.dll" "$(BIN_DIR)\z.dll"
+	if not exist $(BIN_DIR)\assets mkdir $(BIN_DIR)\assets
+	if not exist $(BIN_DIR)\shaders mkdir $(BIN_DIR)\shaders
+
+run: all assets
+	$(BIN_DIR)\$(TARGET)
+
+clean:
+	if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+	if exist $(BIN_DIR) rmdir /S /Q $(BIN_DIR)
+
+.PHONY: all assets run clean

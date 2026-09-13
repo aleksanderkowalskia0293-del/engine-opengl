@@ -1,0 +1,13 @@
+/build/
+/bin/
+tools/gen_assets
+tools/gen_assets.exe
+*.o
+*.exe
+/vcpkg_installed/
+/.vs/
+/.vscode/
+/.idea/
+*.dll
+*.pdb
+*.lib
